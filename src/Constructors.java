@@ -1,84 +1,140 @@
+import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 
 public class Constructors {
     private ArrayList<Integer> bombPositions = new ArrayList<>();
-    private int[] numbers = new int[100];
-    private int powerUpPosition = -1;
+    private ArrayList<Integer> powerUpPositions = new ArrayList<>(); // Nu en lista
+    private int[] numbers;
 
-    //Slumpar platser för bomber
-    public Constructors() {
-        while (bombPositions.size() < 10) {
-            int pos = (int) (Math.random() * 100);
+    private int cols;
+    private int totalCells;
+    private int bombCount;
 
+    public Constructors(int choice) {
+        int powerUpCount;
+        switch (choice) {
+            case 0 -> {
+                cols = 10;
+                totalCells = 100;
+                bombCount = 10;
+                powerUpCount = 1;
+            }
+            case 1 -> {
+                cols = 20;
+                totalCells = 200;
+                bombCount = 25;
+                powerUpCount = 2;
+            }
+            case 2 -> {
+                cols = 40;
+                totalCells = 400;
+                bombCount = 50;
+                powerUpCount = 4;
+            }
+            default -> {
+                cols = 10;
+                totalCells = 100;
+                bombCount = 10;
+                powerUpCount = 1;
+            }
+        }
+
+        this.numbers = new int[totalCells];
+
+        while (bombPositions.size() < bombCount) {
+            int pos = (int) (Math.random() * totalCells);
             if (!bombPositions.contains(pos)) {
                 bombPositions.add(pos);
             }
-
         }
-        //Debugging
-        System.out.println(bombPositions);
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < totalCells; i++) {
             if (!bombPositions.contains(i)) {
                 numbers[i] = countAdjacentBombs(i);
             } else {
-                numbers[i] = -1; // -1 = bomb
+                numbers[i] = -1;
             }
         }
 
-        //Skapar powerup
-        do {
-            powerUpPosition = (int) (Math.random() * 100);
-        } while (bombPositions.contains(powerUpPosition));
 
-        //Debugging
-        System.out.println(powerUpPosition);
+        while (powerUpPositions.size() < powerUpCount) {
+            int pos = (int) (Math.random() * totalCells);
+            if (!bombPositions.contains(pos) && !powerUpPositions.contains(pos)) {
+                powerUpPositions.add(pos);
+            }
+        }
     }
-
-
 
     public boolean isBomb(int index) {
         return bombPositions.contains(index);
     }
 
 
+    public boolean isPowerUp(int index) {
+        return powerUpPositions.contains(index);
+    }
+
     public int getNumberAt(int index) {
         return numbers[index];
     }
 
-    //Räknar antalet bomber runt en ruta
     public int countAdjacentBombs(int index) {
         int count = 0;
-        int[] neighbors = {-11, -10, -9, -1, 1, 9, 10, 11};
+        int[] neighbors = {
+                -cols - 1, -cols, -cols + 1,
+                -1,                1,
+                cols - 1,  cols,  cols + 1
+        };
 
         for (int offset : neighbors) {
             int n = index + offset;
-
-
-            if (n < 0 || n >= 100) {
-                continue;
-            }
-
-            //Kolumn 0
-            if (index % 10 == 0 && (offset == -11 || offset == -1 || offset == 9)) {
-                continue;
-            }
-
-            //Kolumn 9
-            if (index % 10 == 9 && (offset == -9 || offset == 1 || offset == 11)) {
-                continue;
-            }
+            if (n < 0 || n >= totalCells) continue;
+            if (index % cols == 0 && (offset == -cols - 1 || offset == -1 || offset == cols - 1)) continue;
+            if (index % cols == cols - 1 && (offset == -cols + 1 || offset == 1 || offset == cols + 1)) continue;
 
             if (bombPositions.contains(n)) {
                 count++;
             }
         }
-
         return count;
     }
 
-    public int getPowerUpPosition() {
-        return powerUpPosition;
+    public void revealZeros(JButton[] buttons, int index) {
+        int[] neighbors = {
+                -cols - 1, -cols, -cols + 1,
+                -1,                1,
+                cols - 1,  cols,  cols + 1
+        };
+
+        if (index < 0 || index >= totalCells) return;
+        if (!buttons[index].isEnabled() || "🚩".equals(buttons[index].getText())) return;
+
+        int num = getNumberAt(index);
+        buttons[index].setEnabled(false);
+        buttons[index].setBackground(new Color(230, 230, 230));
+
+        if (num > 0) {
+            buttons[index].setText(String.valueOf(num));
+            buttons[index].setFont(new Font("Monospaced", Font.BOLD, 18));
+            return;
+        }
+
+        buttons[index].setText("");
+
+        for (int offset : neighbors) {
+            int n = index + offset;
+            if (index % cols == 0 && (offset == -cols - 1 || offset == -1 || offset == cols - 1)) continue;
+            if (index % cols == cols - 1 && (offset == -cols + 1 || offset == 1 || offset == cols + 1)) continue;
+
+            if (n >= 0 && n < totalCells) {
+                revealZeros(buttons, n);
+            }
+        }
     }
 
+
+    public int getTotalCells() { return totalCells; }
+    public int getCols() { return cols; }
+    public int getBombCount() { return bombCount; }
 }

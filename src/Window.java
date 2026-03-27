@@ -15,7 +15,6 @@ public class Window {
 
     public Window() {
 
-        //Start skärm som säger hur spelet funkar och hur man kör
         JOptionPane.showMessageDialog(
                 null,
                 """
@@ -45,25 +44,16 @@ public class Window {
                 options,
                 options[0]
         );
-        // choice blir nu:
-// 0 om man trycker på "Lätt"
-// 1 om man trycker på "Mellan"
-// 2 om man trycker på "Svår"
-// -1 om man stänger rutan
 
-        //Skapa fönstret
         JFrame gameWindow = new JFrame("Minesweeper");
         gameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        gameWindow.setSize(800, 800);
+        gameWindow.setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-        Constructors bombs = new Constructors();
-        flagsLeft = 10;
+        Constructors bombs = new Constructors(choice);
+        flagsLeft = bombs.getBombCount();
 
-        //Timer + flaglayout
         JPanel topPanel = new JPanel(new GridLayout(1, 2));
         topPanel.setBackground(Color.DARK_GRAY);
-
-        // Lägger till en ram och lite luft runt texten
         topPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.GRAY, 2),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
@@ -86,19 +76,19 @@ public class Window {
         });
         gameTimer.start();
 
-        //Skapar panels
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(Color.DARK_GRAY);
         mainPanel.setLayout(new BorderLayout());
 
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(10, 10));
-        panel.setPreferredSize(new Dimension(600, 600));
-        panel.setMaximumSize(new Dimension(600, 600));
-        panel.setMinimumSize(new Dimension(600, 600));
+        panel.setLayout(new GridLayout(10, bombs.getCols()));
 
-        JButton[] buttons = new JButton[100];
-        for (int i = 0; i < 100; i++) {
+        int boardWidth = bombs.getCols() * 40;
+        int boardHeight = 400;
+        panel.setPreferredSize(new Dimension(boardWidth, boardHeight));
+
+        JButton[] buttons = new JButton[bombs.getTotalCells()];
+        for (int i = 0; i < bombs.getTotalCells(); i++) {
             JButton button = new JButton();
             button.setBackground(new Color(180, 180, 180));
             button.setOpaque(true);
@@ -107,16 +97,12 @@ public class Window {
             buttons[i] = button;
             final int index = i;
 
-            // Klick-hantering
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
 
-                    // Högerklick - flagg
                     if (SwingUtilities.isRightMouseButton(e)) {
-
                         if (button.isEnabled()) {
-
                             if (!"🚩".equals(button.getText())) {
                                 if (flagsLeft > 0) {
                                     button.setText("🚩");
@@ -126,26 +112,20 @@ public class Window {
                                 button.setText("");
                                 flagsLeft++;
                             }
-
                             flagLabel.setText("Flaggor: " + flagsLeft);
                         }
                         return;
                     }
 
-                    // Vänsterklick avslöjar ruta
                     else if (SwingUtilities.isLeftMouseButton(e)) {
-
                         if (!button.isEnabled() || "🚩".equals(button.getText())) {
                             return;
                         }
 
-                        if (index == bombs.getPowerUpPosition()) {
-
-                            //Hitta bomb utan flagga
+                        if (bombs.isPowerUp(index)) {
                             java.util.List<Integer> available = new java.util.ArrayList<>();
-
-                            for (int i = 0; i < 100; i++) {
-                                if (bombs.isBomb(i) && !"🚩".equals(buttons[i].getText())) {
+                            for (int i = 0; i < bombs.getTotalCells(); i++) {
+                                if (bombs.isBomb(i) && !"🚩".equals(buttons[i].getText()) && buttons[i].isEnabled()) {
                                     available.add(i);
                                 }
                             }
@@ -163,50 +143,31 @@ public class Window {
                             if (num >= 1) {
                                 button.setText(num + "⭐");
                                 button.setFont(new Font("Monospaced", Font.BOLD, 18));
-                            } else if (num == 0) {
-                                revealZeros(buttons, bombs, index);
+                            } else {
+                                bombs.revealZeros(buttons, index);
                                 button.setText("⭐");
-
                             }
                             button.setBackground(new Color(230, 230, 230));
                             button.setEnabled(false);
-
-                            JOptionPane.showMessageDialog(
-                                    null,
-                                    "Du fick en power-up! En bomb har avslöjats åt dig."
-                            );
-
+                            JOptionPane.showMessageDialog(null, "Du fick en power-up! En bomb har avslöjats.");
                             return;
                         }
 
-                        // Klick på redan avslöjad/flagga
-                        if (!button.isEnabled() || "🚩".equals(button.getText())) {
-                            return;
-                        }
-
-                        // Klickar på bomb
                         if (bombs.isBomb(index)) {
-
                             gameTimer.stop();
-
-                            for (int j = 0; j < 100; j++) {
-                                if (bombs.isBomb(j)) {
-                                    buttons[j].setText("\uD83D\uDCA3");
-                                }
+                            for (int j = 0; j < bombs.getTotalCells(); j++) {
+                                if (bombs.isBomb(j)) buttons[j].setText("\uD83D\uDCA3");
                                 buttons[j].setEnabled(false);
                             }
-
                             Timer timer = new Timer(1000, a -> {
                                 JOptionPane.showMessageDialog(gameWindow, "BOOM! Du hittade en bomb!");
                             });
                             timer.setRepeats(false);
                             timer.start();
-
                         } else {
                             int num = bombs.countAdjacentBombs(index);
-
                             if (num == 0) {
-                                revealZeros(buttons, bombs, index);
+                                bombs.revealZeros(buttons, index);
                             } else {
                                 button.setText(String.valueOf(num));
                                 button.setBackground(new Color(230, 230, 230));
@@ -214,87 +175,41 @@ public class Window {
                                 button.setEnabled(false);
                             }
 
-                            //Vinst beräkning
                             if (checkWin(buttons, bombs)) {
-
                                 gameTimer.stop();
-
                                 Timer winTimer = new Timer(500, a -> {
-                                    JOptionPane.showMessageDialog(gameWindow, "🎉 Grattis! Du vann spelet!" +
-                                            "\nTid: " + secondsPassed + " sekunder");
+                                    JOptionPane.showMessageDialog(gameWindow, "🎉 Grattis! Du vann spelet!\nTid: " + secondsPassed + " sekunder");
                                 });
                                 winTimer.setRepeats(false);
                                 winTimer.start();
-
-                                for (JButton b : buttons) {
-                                    b.setEnabled(false);
-                                }
+                                for (JButton b : buttons) b.setEnabled(false);
                             }
                         }
                     }
-
                 }
             });
-
             panel.add(button);
         }
 
-        // Här skapar vi en samlad container för både info och spelplan
         JPanel gameContainer = new JPanel(new BorderLayout());
         gameContainer.setBackground(Color.DARK_GRAY);
         gameContainer.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
-
         gameContainer.add(topPanel, BorderLayout.NORTH);
         gameContainer.add(panel, BorderLayout.CENTER);
-
-        Border padding = BorderFactory.createEmptyBorder(5, 5, 5, 5);
-        gameContainer.setBorder(padding);
+        gameContainer.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JPanel boardWrapper = new JPanel(new GridBagLayout());
         boardWrapper.setBackground(new Color(78, 78, 78));
         boardWrapper.add(gameContainer);
 
         mainPanel.add(boardWrapper, BorderLayout.CENTER);
-
         gameWindow.add(mainPanel, BorderLayout.CENTER);
         gameWindow.setVisible(true);
     }
 
-    //Funktionen som beräknar alla nollor
-    private void revealZeros(JButton[] buttons, Constructors bombs, int index) {
-        int[] neighbors = {-11, -10, -9, -1, 1, 9, 10, 11};
-
-        if (index < 0 || index >= 100) return;
-        if (!buttons[index].isEnabled()) return;
-
-        int num = bombs.getNumberAt(index);
-        if (num > 0) {
-            buttons[index].setText(String.valueOf(num));
-            buttons[index].setFont(new Font("Monospaced", Font.BOLD, 18));
-            buttons[index].setBackground(new Color(230, 230, 230));
-            buttons[index].setEnabled(false);
-            return;
-        }
-
-        buttons[index].setText("");
-        buttons[index].setBackground(new Color(230, 230, 230));
-        buttons[index].setEnabled(false);
-
-        for (int offset : neighbors) {
-            int n = index + offset;
-            if (n < 0 || n >= 100) continue;
-
-            if (index % 10 == 0 && (offset == -11 || offset == -1 || offset == 9)) continue;
-            if (index % 10 == 9 && (offset == -9 || offset == 1 || offset == 11)) continue;
-
-            revealZeros(buttons, bombs, n);
-        }
-    }
-
-    //Funktionen som kollar om man vunnit
     private boolean checkWin(JButton[] buttons, Constructors bombs) {
         for (int i = 0; i < buttons.length; i++) {
-            if (!bombs.isBomb(i) && buttons[i].isEnabled()) {
+            if (!bombs.isBomb(i) && buttons[i].isEnabled() && !bombs.isPowerUp(i)) {
                 return false;
             }
         }
