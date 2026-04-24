@@ -2,7 +2,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
 
 public class Window {
@@ -13,25 +12,27 @@ public class Window {
     private Timer gameTimer;
     private int flagsLeft;
 
-    public Window() {
+    public Window(boolean firstTime) {
 
-        JOptionPane.showMessageDialog(
-                null,
-                """
-                💣 Välkommen till Minesweeper!
-        
-                🖱️ Vänsterklick – avslöja en ruta
-                🚩 Högerklick – markera en ruta som misstänkt bomb
-                💥 Klickar du på en bomb förlorar du!
-                ⭐ Indikerar att du hittat en power-up!
-        
-                1 = En bomb i närheten
-                2 = Två bomber i närheten
-                osv...
-                """,
-                "Hur man spelar",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        if (firstTime) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    """
+                            💣 Välkommen till Minesweeper!
+                            
+                            🖱️ Vänsterklick – avslöja en ruta
+                            🚩 Högerklick – markera en ruta som misstänkt bomb
+                            💥 Klickar du på en bomb förlorar du!
+                            ⭐ Indikerar att du hittat en power-up!
+                            
+                            1 = En bomb i närheten
+                            2 = Två bomber i närheten
+                            osv...
+                            """,
+                    "Hur man spelar",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        }
 
         String[] options = {"Lätt", "Mellan", "Svår"};
         int choice = JOptionPane.showOptionDialog(
@@ -149,7 +150,11 @@ public class Window {
                             }
                             button.setBackground(new Color(230, 230, 230));
                             button.setEnabled(false);
-                            JOptionPane.showMessageDialog(null, "Du fick en power-up! En bomb har avslöjats.");
+                            if (checkWin(buttons, bombs)) {
+                                triggerWin(gameWindow);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Du fick en power-up! En bomb har avslöjats.");
+                            }
                             return;
                         }
 
@@ -160,8 +165,14 @@ public class Window {
                                 buttons[j].setEnabled(false);
                             }
                             Timer timer = new Timer(1000, a -> {
-                                JOptionPane.showMessageDialog(gameWindow, "BOOM! Du hittade en bomb!");
+                                int res = JOptionPane.showConfirmDialog(gameWindow, "BOOM! Vill du spela igen?", "Game Over", JOptionPane.YES_NO_OPTION);
+                                if (res == JOptionPane.YES_OPTION) {
+                                    restart(gameWindow);
+                                } else {
+                                    System.exit(0);
+                                }
                             });
+
                             timer.setRepeats(false);
                             timer.start();
                         } else {
@@ -176,13 +187,7 @@ public class Window {
                             }
 
                             if (checkWin(buttons, bombs)) {
-                                gameTimer.stop();
-                                Timer winTimer = new Timer(500, a -> {
-                                    JOptionPane.showMessageDialog(gameWindow, "🎉 Grattis! Du vann spelet!\nTid: " + secondsPassed + " sekunder");
-                                });
-                                winTimer.setRepeats(false);
-                                winTimer.start();
-                                for (JButton b : buttons) b.setEnabled(false);
+                                triggerWin(gameWindow);
                             }
                         }
                     }
@@ -206,7 +211,6 @@ public class Window {
         gameWindow.add(mainPanel, BorderLayout.CENTER);
         gameWindow.setVisible(true);
     }
-
     private boolean checkWin(JButton[] buttons, Constructors bombs) {
         for (int i = 0; i < buttons.length; i++) {
             if (!bombs.isBomb(i) && buttons[i].isEnabled() && !bombs.isPowerUp(i)) {
@@ -214,5 +218,24 @@ public class Window {
             }
         }
         return true;
+    }
+
+    private void triggerWin(JFrame gameWindow) {
+        gameTimer.stop();
+        Timer winTimer = new Timer(500, a -> {
+            int res = JOptionPane.showConfirmDialog(gameWindow, "🎉 Grattis! Du vann!\nTid: " + secondsPassed + " sekunder\nVill du spela igen?", "Vinst", JOptionPane.YES_NO_OPTION);
+            if (res == JOptionPane.YES_OPTION) {
+                restart(gameWindow);
+            } else {
+                System.exit(0);
+            }
+        });
+        winTimer.setRepeats(false);
+        winTimer.start();
+    }
+
+    private void restart(JFrame currentWindow) {
+        currentWindow.dispose();
+        new Window(false);
     }
 }

@@ -14,12 +14,6 @@ public class Constructors {
     public Constructors(int choice) {
         int powerUpCount;
         switch (choice) {
-            case 0 -> {
-                cols = 10;
-                totalCells = 100;
-                bombCount = 10;
-                powerUpCount = 1;
-            }
             case 1 -> {
                 cols = 20;
                 totalCells = 200;
