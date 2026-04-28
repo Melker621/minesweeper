@@ -56,6 +56,7 @@ public class Constructors {
             int pos = (int) (Math.random() * totalCells);
             if (!bombPositions.contains(pos) && !powerUpPositions.contains(pos)) {
                 powerUpPositions.add(pos);
+                System.out.print(powerUpPositions);
             }
         }
     }
@@ -95,32 +96,40 @@ public class Constructors {
     }
 
     public void revealZeros(JButton[] buttons, int index) {
-        int[] neighbors = {
-                -cols - 1, -cols, -cols + 1,
-                -1,                1,
-                cols - 1,  cols,  cols + 1
-        };
-
         if (index < 0 || index >= totalCells) return;
-        if (!buttons[index].isEnabled() || "🚩".equals(buttons[index].getText())) return;
+        if (buttons[index].getBackground().equals(new Color(230, 230, 230)) || "🚩".equals(buttons[index].getText())) {
+            return;
+        }
 
         int num = getNumberAt(index);
-        buttons[index].setEnabled(false);
         buttons[index].setBackground(new Color(230, 230, 230));
+
+        for (java.awt.event.MouseListener ml : buttons[index].getMouseListeners()) {
+            buttons[index].removeMouseListener(ml);
+        }
 
         if (num > 0) {
             buttons[index].setText(String.valueOf(num));
+            Color c = switch (num) {
+                case 1 -> Color.BLUE;
+                case 2 -> new Color(0, 128, 0);
+                case 3 -> Color.RED;
+                case 4 -> new Color(0, 0, 128);
+                case 5 -> new Color(128, 0, 0);
+                case 6 -> new Color(0, 128, 128);
+                default -> Color.BLACK;
+            };
+            buttons[index].setForeground(c);
             buttons[index].setFont(new Font("Monospaced", Font.BOLD, 18));
             return;
         }
 
         buttons[index].setText("");
-
+        int[] neighbors = {-cols - 1, -cols, -cols + 1, -1, 1, cols - 1, cols, cols + 1};
         for (int offset : neighbors) {
             int n = index + offset;
             if (index % cols == 0 && (offset == -cols - 1 || offset == -1 || offset == cols - 1)) continue;
             if (index % cols == cols - 1 && (offset == -cols + 1 || offset == 1 || offset == cols + 1)) continue;
-
             if (n >= 0 && n < totalCells) {
                 revealZeros(buttons, n);
             }
