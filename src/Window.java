@@ -19,8 +19,11 @@ public class Window {
     private JPanel panel;
     private Constructors bombs;
 
+
+    //Starts window, shows rules, and sets difficulty
     public Window(boolean firstTime) {
 
+        //Show rules on first launch only
         if (firstTime) {
             JOptionPane.showMessageDialog(
                     null,
@@ -41,6 +44,7 @@ public class Window {
             );
         }
 
+        // Difficulty selection
         String[] options = {"Lätt", "Mellan", "Svår"};
         int choice = JOptionPane.showOptionDialog(
                 null,
@@ -56,6 +60,14 @@ public class Window {
         if (choice == -1) choice = 0;
         currentDifficulty = options[choice];
 
+        //Adjust size based on difficulty
+        if (currentDifficulty.equals("Svår")) {
+            cellSize = 25;
+        } else if (currentDifficulty.equals("Mellan")) {
+            cellSize = 35;
+        }
+
+        //Main window
         JFrame gameWindow = new JFrame("Minesweeper");
         gameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameWindow.setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -63,6 +75,8 @@ public class Window {
         this.bombs = new Constructors(choice);
         flagsLeft = bombs.getBombCount();
 
+
+        //Top panel: timer, flags, and zoom
         JPanel topPanel = new JPanel(new GridLayout(1, 3));
         topPanel.setBackground(Color.DARK_GRAY);
         topPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -78,6 +92,7 @@ public class Window {
         flagLabel.setFont(new Font("Monospaced", Font.BOLD, 16));
         flagLabel.setForeground(Color.RED);
 
+        //Zoom controls
         JPanel zoomPanel = new JPanel(new FlowLayout());
         zoomPanel.setBackground(Color.DARK_GRAY);
 
@@ -95,8 +110,8 @@ public class Window {
         zoomIn.setFont(new Font("Monospaced", Font.BOLD, 20));
         zoomIn.setPreferredSize(new Dimension(45, 45));
 
-        zoomIn.addActionListener(e -> updateSize(5));
-        zoomOut.addActionListener(e -> updateSize(-5));
+        zoomIn.addActionListener(e -> updateSize(2));
+        zoomOut.addActionListener(e -> updateSize(-2));
 
         zoomPanel.add(zoomOut);
         zoomPanel.add(zoomIn);
@@ -105,17 +120,22 @@ public class Window {
         topPanel.add(flagLabel);
         topPanel.add(zoomPanel);
 
+
+        //Game grid part depending on difficulty
         this.panel = new JPanel();
         panel.setLayout(new GridLayout(0, bombs.getCols()));
         panel.setBackground(Color.DARK_GRAY);
         this.buttons = new JButton[bombs.getTotalCells()];
 
+        //Starts timer
         gameTimer = new Timer(1000, e -> {
             secondsPassed++;
             timerLabel.setText("Tid: " + secondsPassed + " sek");
         });
         gameTimer.start();
 
+
+        //Creates and configures all buttons
         for (int i = 0; i < bombs.getTotalCells(); i++) {
             JButton button = new JButton();
             button.setFocusPainted(false);
@@ -130,9 +150,12 @@ public class Window {
             buttons[i] = button;
             final int index = i;
 
+            //Makes so right/left clicks work
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
+
+                    //Right click puts/removes flag
                     if (SwingUtilities.isRightMouseButton(e)) {
                         if (button.getBackground().equals(new Color(180, 180, 180))) {
                             if (!"🚩".equals(button.getText())) {
@@ -146,11 +169,15 @@ public class Window {
                             }
                             flagLabel.setText("Flaggor: " + flagsLeft);
                         }
-                    } else if (SwingUtilities.isLeftMouseButton(e)) {
+                    }
+
+                    //left click reveals cell
+                    else if (SwingUtilities.isLeftMouseButton(e)) {
                         if (button.getBackground().equals(new Color(230, 230, 230)) || "🚩".equals(button.getText())) {
                             return;
                         }
 
+                        //Check for power-up
                         if (bombs.isPowerUp(index)) {
                             java.util.List<Integer> available = new java.util.ArrayList<>();
                             for (int k = 0; k < bombs.getTotalCells(); k++) {
@@ -162,17 +189,21 @@ public class Window {
                                 int revealIndex = available.get((int)(Math.random() * available.size()));
                                 buttons[revealIndex].setText("💣");
                                 buttons[revealIndex].setBackground(new Color(255,180,180));
+
+                                //If bomb you can't interact
                                 for (java.awt.event.MouseListener ml : buttons[revealIndex].getMouseListeners()) {
                                     buttons[revealIndex].removeMouseListener(ml);
                                 }
                                 flagsLeft--;
                                 flagLabel.setText("Flaggor: " + flagsLeft);
                             }
+
+                            //power-ups shows as a star
                             int num = bombs.countAdjacentBombs(index);
                             if (num >= 1) {
                                 button.setText(num + "⭐");
                                 button.setForeground(getNumberColor(num));
-                                button.setFont(new Font("Monospaced", Font.BOLD, (int)(cellSize * 0.45)));
+                                button.setFont(new Font("Monospaced", Font.BOLD, (int)(cellSize * 0.5)));
                             } else {
                                 bombs.revealZeros(buttons, index);
                                 button.setText("⭐");
@@ -185,6 +216,7 @@ public class Window {
                             return;
                         }
 
+                        //Game over if bomb
                         if (bombs.isBomb(index)) {
                             gameTimer.stop();
                             for (int j = 0; j < bombs.getTotalCells(); j++) {
@@ -203,7 +235,10 @@ public class Window {
                             });
                             timer.setRepeats(false);
                             timer.start();
-                        } else {
+                        }
+
+                        //reveals normal squares when selcted
+                        else {
                             int num = bombs.countAdjacentBombs(index);
                             if (num == 0) {
                                 bombs.revealZeros(buttons, index);
@@ -211,7 +246,7 @@ public class Window {
                                 button.setText(String.valueOf(num));
                                 button.setForeground(getNumberColor(num));
                                 button.setBackground(new Color(230, 230, 230));
-                                button.setFont(new Font("Monospaced", Font.BOLD, (int)(cellSize * 0.45)));
+                                button.setFont(new Font("Monospaced", Font.BOLD, (int)(cellSize * 0.5)));
                                 for (java.awt.event.MouseListener ml : button.getMouseListeners()) {
                                     button.removeMouseListener(ml);
                                 }
@@ -224,6 +259,8 @@ public class Window {
             panel.add(button);
         }
 
+
+        //Side panel for highscores
         highscoreLabel = new JLabel(gethighscoreText(), SwingConstants.CENTER);
         highscoreLabel.setFont(new Font("Monospaced", Font.BOLD, 18));
         highscoreLabel.setForeground(Color.YELLOW);
@@ -233,6 +270,8 @@ public class Window {
         rightPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
         rightPanel.add(highscoreLabel, BorderLayout.CENTER);
 
+
+        // GUI Assembly
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.DARK_GRAY);
 
@@ -253,21 +292,24 @@ public class Window {
         gameWindow.setVisible(true);
     }
 
+
+    //Changes zoom-limits depending on difficulty and updates size
     private void updateSize(int delta) {
         int newSize = cellSize + delta;
-
+        int minLimit = 15;
         int maxLimit;
+
         switch(currentDifficulty) {
-            case "Lätt" -> maxLimit = 80;
-            case "Mellan" -> maxLimit = 45;
-            case "Svår" -> maxLimit = 30;
-            default -> maxLimit = 50;
+            case "Lätt" -> maxLimit = 100;
+            case "Mellan" -> maxLimit = 65;
+            case "Svår" -> maxLimit = 40;
+            default -> maxLimit = 80;
         }
 
-        if (newSize < 15 || newSize > maxLimit) return;
+        if (newSize < minLimit || newSize > maxLimit) return;
 
         cellSize = newSize;
-        int fontSize = (int) (cellSize * 0.45);
+        int fontSize = (int) (cellSize * 0.5);
         for (JButton b : buttons) {
             b.setPreferredSize(new Dimension(cellSize, cellSize));
             b.setFont(new Font("Monospaced", Font.BOLD, fontSize));
@@ -276,6 +318,8 @@ public class Window {
         panel.repaint();
     }
 
+
+    //check win
     private boolean checkWin(JButton[] buttons, Constructors bombs) {
         for (int i = 0; i < buttons.length; i++) {
             if (!bombs.isBomb(i) && buttons[i].getBackground().equals(new Color(180, 180, 180))) {
@@ -285,10 +329,13 @@ public class Window {
         return true;
     }
 
+
+    //Shows if win and updates highscore, restart option
     private void triggerWin(JFrame gameWindow) {
         gameTimer.stop();
         scoreManager.addScore(secondsPassed, currentDifficulty);
         highscoreLabel.setText(gethighscoreText());
+
         Timer winTimer = new Timer(500, a -> {
             int res = JOptionPane.showConfirmDialog(gameWindow, "🎉 Grattis! Du vann!\nTid: " + secondsPassed + " sekunder\nVill du spela igen?", "Vinst", JOptionPane.YES_NO_OPTION);
             if (res == JOptionPane.YES_OPTION) restart(gameWindow);
@@ -298,11 +345,15 @@ public class Window {
         winTimer.start();
     }
 
+
+    //Restarts game
     private void restart(JFrame currentWindow) {
         currentWindow.dispose();
         new Window(false);
     }
 
+
+    //Puts colors on adjacent bomb numbers
     private Color getNumberColor(int num) {
         return switch (num) {
             case 1 -> Color.BLUE;
@@ -315,10 +366,13 @@ public class Window {
         };
     }
 
+
+    //Shows high scores with HTML
     private String gethighscoreText() {
         java.util.List<Integer> topScores = scoreManager.getTopThree(currentDifficulty);
         StringBuilder sb = new StringBuilder("<html><div style='text-align: center;'>");
         sb.append("<b style='color: yellow;'>TOP 3 (" + currentDifficulty.toUpperCase() + "):</b><br><br>");
+
         if (topScores.isEmpty()) {
             sb.append("-<br>-<br>-");
         } else {
@@ -329,6 +383,7 @@ public class Window {
                 sb.append((i + 1) + ". -<br>");
             }
         }
+
         sb.append("</div></html>");
         return sb.toString();
     }
