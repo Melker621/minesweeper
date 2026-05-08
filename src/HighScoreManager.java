@@ -53,7 +53,7 @@ public class HighScoreManager {
                 scores.add(Integer.parseInt(line.trim())); // Omvandla textrad till siffror
             }
         } catch (IOException | NumberFormatException e) {
-            
+
         }
         return scores;
     }
